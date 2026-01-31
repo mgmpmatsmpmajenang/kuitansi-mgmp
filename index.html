@@ -73,7 +73,7 @@
                             </tr>
                         </thead>
                         <tbody id="tableBody" class="bg-white divide-y divide-gray-200">
-                            <!-- Data dari sheet akan muncul di sini -->
+                            <!-- Data akan dimuat di sini -->
                         </tbody>
                     </table>
                 </div>
@@ -120,8 +120,12 @@
                             
                             <!-- Area Tanda Tangan -->
                             <div class="h-24 flex items-center justify-center relative">
-                                <!-- Gambar Tanda Tangan dari Link Drive (Menggunakan format direct link) -->
-                                <img src="https://lh3.googleusercontent.com/u/0/d/1iUpqdeZ5sxJ6mW2OWmvF-3KKCA5iTksv" class="absolute h-24 w-auto object-contain z-10 scale-125" alt="Tanda Tangan Bendahara" onerror="this.style.display='none'; this.nextElementSibling.style.display='block';">
+                                <!-- URL Tanda Tangan dengan Proxy Google agar tampil di GitHub Pages -->
+                                <img src="https://lh3.googleusercontent.com/d/1iUpqdeZ5sxJ6mW2OWmvF-3KKCA5iTksv" 
+                                     class="absolute h-24 w-auto object-contain z-10 scale-125" 
+                                     alt="Tanda Tangan" 
+                                     crossorigin="anonymous"
+                                     onerror="this.style.display='none'; this.nextElementSibling.classList.remove('hidden');">
                                 
                                 <!-- Fallback jika gambar gagal dimuat -->
                                 <span class="signature-font text-4xl text-blue-800 opacity-80 select-none hidden">Belynda S.F.</span>
@@ -147,28 +151,20 @@
         </div>
     </div>
 
-    <!-- Script Utama -->
     <script>
         const API_URL = "https://script.google.com/macros/s/AKfycbzAlqjFVCcdXu_xa0Z9MhMqRkS7gdBbvnfqHGIu3f9jyZWoAdm19YJlX7GYlwRmGj5L/exec";
 
         function formatRupiah(angka) {
             const num = parseFloat(angka) || 0;
-            const format = new Intl.NumberFormat('id-ID', {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2
-            }).format(num);
-            return "Rp" + format;
+            return "Rp" + new Intl.NumberFormat('id-ID', { minimumFractionDigits: 2 }).format(num);
         }
 
         function formatTanggalIndo(dateStr) {
             try {
                 const date = new Date(dateStr);
                 if (isNaN(date.getTime())) return dateStr;
-                const options = { day: 'numeric', month: 'long', year: 'numeric' };
-                return date.toLocaleDateString('id-ID', options);
-            } catch (e) {
-                return dateStr;
-            }
+                return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+            } catch (e) { return dateStr; }
         }
 
         function switchTab(tab) {
@@ -177,11 +173,11 @@
             const btnInput = document.getElementById('tab-input');
             const btnCetak = document.getElementById('tab-cetak');
             if (tab === 'input') {
-                btnInput.className = 'px-6 py-2 rounded-full bg-blue-600 text-white font-semibold shadow-md transition-all';
-                btnCetak.className = 'px-6 py-2 rounded-full bg-white text-blue-600 font-semibold shadow-md transition-all';
+                btnInput.className = 'px-6 py-2 rounded-full bg-blue-600 text-white font-semibold shadow-md';
+                btnCetak.className = 'px-6 py-2 rounded-full bg-white text-blue-600 font-semibold shadow-md';
             } else {
-                btnInput.className = 'px-6 py-2 rounded-full bg-white text-blue-600 font-semibold shadow-md transition-all';
-                btnCetak.className = 'px-6 py-2 rounded-full bg-blue-600 text-white font-semibold shadow-md transition-all';
+                btnInput.className = 'px-6 py-2 rounded-full bg-white text-blue-600 font-semibold shadow-md';
+                btnCetak.className = 'px-6 py-2 rounded-full bg-blue-600 text-white font-semibold shadow-md';
                 fetchData();
             }
         }
@@ -190,60 +186,41 @@
             e.preventDefault();
             const btn = document.getElementById('btnSimpan');
             btn.disabled = true;
-            btn.innerText = "MENGIRIM DATA...";
+            btn.innerText = "MENGIRIM...";
             const data = {
                 penerima: document.getElementById('penerima').value,
                 jumlah: document.getElementById('jumlah').value,
                 keperluan: document.getElementById('keperluan').value
             };
             try {
-                await fetch(API_URL, {
-                    method: 'POST',
-                    mode: 'no-cors',
-                    cache: 'no-cache',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(data)
-                });
-                alert("Data berhasil dikirim ke Google Sheets!");
+                await fetch(API_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(data) });
+                alert("Data tersimpan!");
                 document.getElementById('kuitansiForm').reset();
-            } catch (error) {
-                console.error(error);
-                alert("Gagal mengirim data.");
-            } finally {
-                btn.disabled = false;
-                btn.innerText = "SIMPAN KE GOOGLE SHEETS";
-            }
+            } catch (error) { alert("Gagal kirim data."); }
+            finally { btn.disabled = false; btn.innerText = "SIMPAN KE GOOGLE SHEETS"; }
         });
 
         async function fetchData() {
             const tableBody = document.getElementById('tableBody');
-            tableBody.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-gray-500 italic">Sedang mengambil data dari Google Sheets...</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="5" class="text-center py-4">Memuat data...</td></tr>';
             try {
                 const response = await fetch(API_URL);
                 const result = await response.json();
                 tableBody.innerHTML = '';
-                if (result.data.length <= 1) {
-                    tableBody.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-gray-500">Belum ada data kuitansi.</td></tr>';
-                    return;
-                }
-                result.data.forEach((row, index) => {
-                    if (index === 0) return; 
+                result.data.slice(1).forEach(row => {
                     const tr = document.createElement('tr');
-                    tr.className = "hover:bg-blue-50 transition";
                     tr.innerHTML = `
-                        <td class="px-4 py-3 text-sm text-gray-600 font-mono">${row[0]}</td>
-                        <td class="px-4 py-3 text-sm text-center text-gray-500">${formatTanggalIndo(row[1])}</td>
-                        <td class="px-4 py-3 text-sm font-semibold text-gray-800">${row[2]}</td>
-                        <td class="px-4 py-3 text-sm font-bold text-green-700">${formatRupiah(row[3])}</td>
-                        <td class="px-4 py-3 text-right">
-                            <button onclick='viewReceipt(${JSON.stringify(row)})' class="bg-blue-600 text-white px-3 py-1 rounded text-xs font-bold hover:bg-blue-700 transition shadow">PRATINJAU</button>
+                        <td class="px-4 py-2 font-mono">${row[0]}</td>
+                        <td class="px-4 py-2">${formatTanggalIndo(row[1])}</td>
+                        <td class="px-4 py-2 font-semibold">${row[2]}</td>
+                        <td class="px-4 py-2 text-green-700 font-bold">${formatRupiah(row[3])}</td>
+                        <td class="px-4 py-2 text-right">
+                            <button onclick='viewReceipt(${JSON.stringify(row)})' class="bg-blue-600 text-white px-3 py-1 rounded text-xs font-bold shadow">PRATINJAU</button>
                         </td>
                     `;
                     tableBody.appendChild(tr);
                 });
-            } catch (error) {
-                tableBody.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-red-500 font-bold">Terjadi kesalahan koneksi database.</td></tr>';
-            }
+            } catch (error) { tableBody.innerHTML = '<tr><td colspan="5" class="text-center py-4 text-red-500">Error koneksi database.</td></tr>'; }
         }
 
         function viewReceipt(row) {
@@ -260,42 +237,24 @@
         async function downloadPDF() {
             const { jsPDF } = window.jspdf;
             const element = document.getElementById('receiptUI');
-            const noKuitansi = document.getElementById('resID').innerText;
-            
             const canvas = await html2canvas(element, { scale: 3, useCORS: true });
             const imgData = canvas.toDataURL('image/png');
-            
             const pdf = new jsPDF('l', 'mm', 'a4');
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = (canvas.height * pdfWidth) / canvas.width;
-            const yPos = (pdf.internal.pageSize.getHeight() - pdfHeight) / 2;
-            
-            pdf.addImage(imgData, 'PNG', 0, yPos, pdfWidth, pdfHeight);
-            pdf.save(`Kuitansi_MGMP_${noKuitansi}.pdf`);
+            pdf.addImage(imgData, 'PNG', 0, 15, 297, (canvas.height * 297) / canvas.width);
+            pdf.save(`Kuitansi_${document.getElementById('resID').innerText}.pdf`);
         }
 
-        function terbilang(nominal) {
-            const bilangan = ["", "Satu", "Dua", "Tiga", "Empat", "Lima", "Enam", "Tujuh", "Delapan", "Sembilan", "Sepuluh", "Sebelas"];
-            let temp = "";
-            let n = parseInt(nominal);
-            if (n < 12) {
-                temp = " " + bilangan[n];
-            } else if (n < 20) {
-                temp = terbilang(n - 10) + " Belas";
-            } else if (n < 100) {
-                temp = terbilang(Math.floor(n / 10)) + " Puluh " + terbilang(n % 10);
-            } else if (n < 200) {
-                temp = " Seratus " + terbilang(n - 100);
-            } else if (n < 1000) {
-                temp = terbilang(Math.floor(n / 100)) + " Ratus " + terbilang(n % 100);
-            } else if (n < 2000) {
-                temp = " Seribu " + terbilang(n - 1000);
-            } else if (n < 1000000) {
-                temp = terbilang(Math.floor(n / 1000)) + " Ribu " + terbilang(n % 1000);
-            } else if (n < 1000000000) {
-                temp = terbilang(Math.floor(n / 1000000)) + " Juta " + terbilang(n % 1000000);
-            }
-            return temp.replace(/\s+/g, ' ').trim();
+        function terbilang(n) {
+            const b = ["", "Satu", "Dua", "Tiga", "Empat", "Lima", "Enam", "Tujuh", "Delapan", "Sembilan", "Sepuluh", "Sebelas"];
+            n = parseInt(n);
+            if (n < 12) return b[n];
+            if (n < 20) return terbilang(n - 10) + " Belas";
+            if (n < 100) return terbilang(Math.floor(n / 10)) + " Puluh " + terbilang(n % 10);
+            if (n < 200) return "Seratus " + terbilang(n - 100);
+            if (n < 1000) return terbilang(Math.floor(n / 100)) + " Ratus " + terbilang(n % 100);
+            if (n < 2000) return "Seribu " + terbilang(n - 1000);
+            if (n < 1000000) return terbilang(Math.floor(n / 1000)) + " Ribu " + terbilang(n % 1000);
+            return terbilang(Math.floor(n / 1000000)) + " Juta " + terbilang(n % 1000000);
         }
     </script>
 </body>
